@@ -33,7 +33,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 velocity;
     private bool isGrounded;            //땅에 있는지 판별
     private bool wasGrounded;           //직전 프레임에 땅에 있었는지 판단
-    private float attakTimer;
+    private float attackTimer;
 
     // Start is called before the first frame update
     void Start()
@@ -46,13 +46,24 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         CheckGrounded();
+        HandleLanding();
         HandleMovement();
         UpdateAnimator();
+        HandleAttack();
         HandleJump();
     }
 
     void HandleMovement()                   //이동 함수 제작
     {
+        //공격중이거나 착지중일떄 움직임 제한
+        if((isAttacking && !canMoveWhileAttacking) || isLanding)
+        {
+            currentSpeed = 0;
+            return;
+        }
+
+
+
         float horizontal = Input.GetAxis("Horizontal");
         float verical = Input.GetAxis("Vertical");
 
@@ -124,11 +135,59 @@ public class PlayerController : MonoBehaviour
 
    void HandleJump()
     {
+
+        if(Input.GetButtonDown("Jump") && isGrounded)
+        {
+            velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
+
+            if(animator !=null)
+            {
+                animator.SetTrigger("jumpTrigger");
+            }
+        }
+
         if (!isGrounded)        //땅위에 있지 않을 경우 중력 적용
         {
             velocity.y += gravity * Time.deltaTime;
         }
 
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    void HandleLanding()
+    {
+        if(isLanding)
+        {
+            landingTimer -= Time.deltaTime;     //랜딩 타이머 시간만큼 못움직이게
+
+            if(landingTimer <= 0)
+            {
+                isLanding = false;               //착지 완료 처리
+            }
+        }
+    }
+
+    void HandleAttack()
+    {
+        if(isAttacking)     //공격중일떄
+        {
+            attackTimer -= Time.deltaTime;  //공격 타이머를 감소
+
+            if(attackTimer <= 0)
+            {
+                isAttacking = false;
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha1) && !isAttacking)   //공격중이 아닐때 키를 누르면 공격
+        {
+            isAttacking = true;     //공격중 표시
+            attackTimer = attackDuration;   //타이머 리필
+
+            if (animator !=null)
+            {
+                animator.SetTrigger("attackTrigger");
+            }
+        }
     }
 }
